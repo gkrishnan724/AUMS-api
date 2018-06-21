@@ -119,11 +119,11 @@ Session.prototype.getGrades = Promise.coroutine(function *(sem){
 
 
 
-Session.prototype.Attendance = Promise.coroutine(function *(sem,type){
+Session.prototype.getAttendance = Promise.coroutine(function *(sem,type){
     
     if(type){
         var type = type.toLowerCase();
-        if(type.contains("lab") || type.contains("practical")){
+        if(type.includes("lab") || type.includes("practical")){
             type = 2;
         }
         else{
@@ -169,13 +169,43 @@ Session.prototype.Attendance = Promise.coroutine(function *(sem,type){
                 }
             }
             
-            console.log(formData);
-            // Request to fetch all the courses from the specific semester.
+            
+            
             request.post({uri:url,form:formData},function(err,response,body){
+                let data = [];
                 if (err) throw err;
                 let $ = cheerio.load(body);
-                $('select[name="htmlPageTopContainer_selectCourse"]').children().each(function(i,elem){
-                    console.log($(this).text());
+                let table = $('tr[align="right"]').first().children().first().html();
+                $ = cheerio.load(table);
+                $('tbody').children().each(function(i,elem){
+                    var obj = {
+                        code: '',
+                        name: '',
+                        classes:0,
+                        attended:0,
+                        percentage:0,
+                    }
+                    
+                    
+                    
+                    if(i > 0){
+                        let $select = cheerio.load($(this).html());
+                        
+                        if($select('span:nth-child(1)').text().trim() != ''){
+                            obj.code = $select('span:nth-child(1)').text();
+                            obj.name = $select('span:nth-child(2)').text();
+                            obj.type = $select('span:nth-child(3)').text();
+                            obj.classes = $select('span:nth-child(6)').text();
+                            obj.attended = $select('span:nth-child(7)').text();
+                            obj.percentage = $select('span:nth-child(8)').text();
+                            data.push(obj);
+                        }
+                    }   
+                    
+                });
+
+                data.forEach(function(obj){
+                    console.log(obj);
                 });
                 resolve();
             });
@@ -196,4 +226,4 @@ Session.prototype.getAssignments = Promise.coroutine(function *(courseCode){
 
 let s1 = new Session('AM.EN.U4CSE16126','qwerty');
 
-s1.getAttendance(3);
+s1.getAttendance(2);
