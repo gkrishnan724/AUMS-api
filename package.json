@@ -1,0 +1,19 @@
+{
+  "name": "camel",
+  "version": "1.0.0",
+  "description": "PA bot",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "author": "gkrishnan724",
+  "license": "MIT",
+  "dependencies": {
+    "bluebird": "^3.5.1",
+    "cheerio": "^1.0.0-rc.2",
+    "promise": "^8.0.1",
+    "request": "^2.87.0",
+    "request-promise": "^4.2.2",
+    "slackbots": "^1.1.0"
+  }
+}
