@@ -46,8 +46,7 @@ Session.prototype.login = Promise.coroutine(function *(username,password){
             return new Promise(function(resolve,reject){
                 request.post({url:url,form:form},function(err,response,body){
                     if (err) throw err;
-                    let $ = cheerio.load(body);
-                    
+                    let $ = cheerio.load(body,{lowerCaseTags:true});
                     if($('input[name="lt"]').val()){
                         console.log("Unsuccessful login..");
                         reject();
@@ -65,7 +64,7 @@ Session.prototype.login = Promise.coroutine(function *(username,password){
         yield new Promise(function(resolve,reject){
             request({url:login_url},function(err,response,body){
                 if (err) throw err;
-                let $ = cheerio.load(body);
+                let $ = cheerio.load(body,{lowerCaseTags:true});
                 self.lt = $('input[name="lt"]').val();
                 self._eventId = $('input[name="_eventId"]').val();
                 self.submit = $('input[name="submit"]').val();
@@ -81,7 +80,6 @@ Session.prototype.login = Promise.coroutine(function *(username,password){
             submit:self.submit
         }
         self.name = yield post(login_url,formData);
-       console.log(self.name);
     }
 
     return self.name;
@@ -109,11 +107,69 @@ Session.prototype.getGrades = Promise.coroutine(function *(sem){
     var request = self.request;
     self.name = yield self.login(self.username,self.password);
 
-    yield new Promise(function(resolve,reject){
+    let data = yield new Promise(function(resolve,reject){
         request(url,function(err,response,body){
-            resolve();
+            let $ = cheerio.load(body,{lowerCaseTags:true});
+            let formData = {};
+            formData.Page_refIndex_hidden = $('input[name="Page_refIndex_hidden"]').val();
+            formData.htmlPageTopContainer_hiddentblGrades = $('input[name="htmlPageTopContainer_hiddentblGrades"]').val();
+            formData.htmlPageTopContainer_status = $('input[name="htmlPageTopContainer_status"]').val();
+            formData.htmlPageTopContainer_action = "UMS-EVAL_STUDPERFORMSURVEY_CHANGESEM_SCREEN";
+            formData.htmlPageTopContainer_notify = $('input[name="htmlPageTopContainer_notify"]').val();
+            let select = $('select[name="htmlPageTopContainer_selectStep"]').children();
+            select.each(function(i,elem){
+                if($(this).text() == sem){
+                    formData.htmlPageTopContainer_selectStep = $(this).val();
+                }
+            });
+            for(var key in formData){
+                if(formData.hasOwnProperty(key)){
+                   if(!formData[key]){
+                       formData[key] = '';
+                   }
+                }
+            }
+
+            request.post({uri:url,form:formData},function(err,response,body){
+                let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});
+                let table;
+                $('tr[align="right"]').each(function(i,elem){
+                    if(i == 1){
+                      table =  $(this).html();
+                    }
+                });
+                $ = cheerio.load(table);
+                let data = {
+                    SGPA:'',
+                    grades:[]
+                };
+                $('tbody').children().each(function(i,elem){
+                    let obj = {};
+                    if(i > 0){
+                        let $select = cheerio.load($(this).html());
+                        if($select('span:nth-child(1)').text().trim() != ''){
+                            obj.code = $select('span:nth-child(2)').text();
+                            obj.name = $select('span:nth-child(3)').text();
+                            obj.type = $select('span:nth-child(5)').text();
+                            obj.grade = $select('span:nth-child(6)').text();
+                            data.grades.push(obj);
+                        }else{
+                            data.SGPA = $select('span:nth-child(6)').text();
+                        }
+                    }
+                });
+                data.grades.forEach(function(obj){
+                    console.log(obj.code,obj.grade);
+                });
+                console.log("SGPA"+data.SGPA);
+                resolve(data);
+            });
+
+
         });
     });
+
+    return data;
     
 });
 
@@ -138,10 +194,10 @@ Session.prototype.getAttendance = Promise.coroutine(function *(sem,type){
     var request = self.request;
     self.name = yield self.login(self.username,self.password);
 
-    yield new Promise(function(resolve,reject){
+    let data = yield new Promise(function(resolve,reject){
         request(url,function(err,response,body){
             if(err) throw err;
-            let $  = cheerio.load(body);
+            let $  = cheerio.load(body,{lowerCaseTags:true});
             let formData = {};
             formData.Page_refIndex_hidden = $('input[name="Page_refIndex_hidden"]').val();
             formData.htmlPageTopContainer_txtrollnumber = $('input[name="htmlPageTopContainer_txtrollnumber"]').val();
@@ -174,20 +230,10 @@ Session.prototype.getAttendance = Promise.coroutine(function *(sem,type){
             request.post({uri:url,form:formData},function(err,response,body){
                 let data = [];
                 if (err) throw err;
-                let $ = cheerio.load(body);
+                let $ = cheerio.load(body,{lowerCaseTags:true});
                 let table = $('tr[align="right"]').first().children().first().html();
                 $ = cheerio.load(table);
                 $('tbody').children().each(function(i,elem){
-                    var obj = {
-                        code: '',
-                        name: '',
-                        classes:0,
-                        attended:0,
-                        percentage:0,
-                    }
-                    
-                    
-                    
                     if(i > 0){
                         let $select = cheerio.load($(this).html());
                         
@@ -204,19 +250,18 @@ Session.prototype.getAttendance = Promise.coroutine(function *(sem,type){
                     
                 });
 
-                data.forEach(function(obj){
-                    console.log(obj);
-                });
-                resolve();
+                resolve(data);
             });
         });
-    });    
+    });
+    return data;    
 });
 
 Session.prototype.getAssignments = Promise.coroutine(function *(courseCode){
     var self = this;
     var request = self.request;
     self.name = yield self.login(self.username,self.password);
+    
 });
 
 
@@ -225,5 +270,4 @@ Session.prototype.getAssignments = Promise.coroutine(function *(courseCode){
 
 
 let s1 = new Session('AM.EN.U4CSE16126','qwerty');
-
-s1.getAttendance(2);
+s1.getGrades(4);
