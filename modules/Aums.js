@@ -120,6 +120,7 @@ Session.prototype.getGrades = Promise.coroutine(function *(sem){
             select.each(function(i,elem){
                 if($(this).text() == sem){
                     formData.htmlPageTopContainer_selectStep = $(this).val();
+                    return;
                 }
             });
             for(var key in formData){
@@ -136,32 +137,28 @@ Session.prototype.getGrades = Promise.coroutine(function *(sem){
                 $('tr[align="right"]').each(function(i,elem){
                     if(i == 1){
                       table =  $(this).html();
+                      return;
                     }
                 });
                 $ = cheerio.load(table);
                 let data = {
                     SGPA:'',
-                    grades:[]
                 };
                 $('tbody').children().each(function(i,elem){
                     let obj = {};
                     if(i > 0){
                         let $select = cheerio.load($(this).html());
-                        if($select('span:nth-child(1)').text().trim() != ''){
+                        if($select('span:nth-child(1)').text() != 'SGPA'){
                             obj.code = $select('span:nth-child(2)').text();
                             obj.name = $select('span:nth-child(3)').text();
                             obj.type = $select('span:nth-child(5)').text();
                             obj.grade = $select('span:nth-child(6)').text();
                             data.grades.push(obj);
                         }else{
-                            data.SGPA = $select('span:nth-child(6)').text();
+                            data.SGPA = $select('span:nth-child(2)').text();
                         }
                     }
                 });
-                data.grades.forEach(function(obj){
-                    console.log(obj.code,obj.grade);
-                });
-                console.log("SGPA"+data.SGPA);
                 resolve(data);
             });
 
@@ -213,6 +210,7 @@ Session.prototype.getAttendance = Promise.coroutine(function *(sem,type){
             semselect.each(function(i,elem){
                 if ($(this).text() == sem){
                     formData.htmlPageTopContainer_selectSem = $(this).val();
+                    return;
                 }
             });
 
@@ -234,6 +232,7 @@ Session.prototype.getAttendance = Promise.coroutine(function *(sem,type){
                 let table = $('tr[align="right"]').first().children().first().html();
                 $ = cheerio.load(table);
                 $('tbody').children().each(function(i,elem){
+                    let obj = {};
                     if(i > 0){
                         let $select = cheerio.load($(this).html());
                         
@@ -249,6 +248,9 @@ Session.prototype.getAttendance = Promise.coroutine(function *(sem,type){
                     }   
                     
                 });
+                data.forEach(function(obj){
+                    console.log(obj.code,obj.percentage);
+                })
 
                 resolve(data);
             });
@@ -265,9 +267,92 @@ Session.prototype.getAssignments = Promise.coroutine(function *(courseCode){
 });
 
 
+Session.prototype.getMarks = Promise.coroutine(function *(sem){
+    var self = this;
+    var url = url_list.viewMarks;
+    var request = self.request;
+    self.name = yield self.login(self.username,self.password);
+
+    let data = yield new Promise(function(resolve,reject){
+        request(url,function(err,response,body){
+            if(err) throw err;
+            let $ = cheerio.load(body,{lowerCaseTags:true,lowerCaseAttributeNames:true});
+            let formData = {};
+            formData.Page_refIndex_hidden = $('input[name="Page_refIndex_hidden"]').val();
+            formData.htmlPageTopContainer_status = $('input[name="htmlPageTopContainer_status"]').val();
+            formData.htmlPageTopContainer_action = 'UMS-EVAL_STUDMARKVIEW_SELSEM_SCREEN';
+            formData.htmlPageTopContainer_notify = $('input[name="htmlPageTopContainer_notify"]').val();
+            let select = $('select[name="htmlPageTopContainer_selectStep"]').children();
+
+            select.each(function(i,elem){
+                if($(this).text() == sem){
+                    formData.htmlPageTopContainer_selectStep = $(this).val();
+                    return;
+                }
+            });
+
+            for(var key in formData){
+                if(formData.hasOwnProperty(key)){
+                   if(!formData[key]){
+                       formData[key] = '';
+                   }
+                }
+            }
+
+            request.post({uri:url,form:formData},function(err,response,body){
+                if(err) throw err;
+
+                let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});
+                let table; 
+                $('tr[align="right"]').each(function(i,elem){
+                    if(i == 1){
+                      table =  $(this).html();
+                      return;
+                    }
+                });
+                $ = cheerio.load(table);
+                let data = [];
+                $('tbody').children().each(function(i,elem){
+                    let $select = cheerio.load($(this).html())
+                    if(i == 0){
+                        $(this).children().each(function(i,elem){
+                            if(i > 2){
+                                data.push({code:$(this).text().trim()});
+                            }
+                        });
+                    }else{
+                        var elem = this;
+                        var key = $select('span:nth-child(1)').text();
+                        data.forEach(function(obj,i){
+                            var val = i+4;
+                            var value = $select('span:nth-child('+val+')').text().trim();
+                            if( value != '' && value != 'NP'){
+                                obj[key] = value;
+                            }
+                        });
+                        
+                        
+                    }
+                });
+
+                resolve(data);
+
+            });
+                        
+
+
+
+
+        });
+    })
+
+    return data;
+});
+
 
 
 
 
 let s1 = new Session('AM.EN.U4CSE16126','qwerty');
-s1.getGrades(4);
+
+s1.getMarks(4);
