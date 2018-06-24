@@ -143,6 +143,7 @@ Session.prototype.getGrades = Promise.coroutine(function *(sem){
                 $ = cheerio.load(table);
                 let data = {
                     SGPA:'',
+                    grades:[]
                 };
                 $('tbody').children().each(function(i,elem){
                     let obj = {};
@@ -350,9 +351,76 @@ Session.prototype.getMarks = Promise.coroutine(function *(sem){
 });
 
 
+Session.prototype.showRegistrationStatus = Promise.coroutine(function *(sem){
+    var self = this;
+    var url = url_list.registrationStatus;
+    var request = self.request;
 
+    self.name = yield self.login(self.username,self.password);
+    let data = yield new Promise(function(resolve,reject){
+        request(url,function(err,response,body){
+            if(err) throw err;
+            let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});
+            let formData = {};
+            formData.Page_refIndex_hidden = $('input[name="Page_refIndex_hidden"]').val();
+            formData.htmlPageTopContainer_status = $('input[name="htmlPageTopContainer_status"]').val();
+            formData.htmlPageTopContainer_action = 'UMS-SRM_SHOW_REGISTRATION_STATUS';
+            formData.htmlPageTopContainer_notify = $('input[name="htmlPageTopContainer_notify"]').val();
+            formData.htmlPageTopContainer_selectRegType = "Regular";
+            let select = $('select[name="htmlPageTopContainer_selectStep"]').children();
+            select.each(function(i,elem){
+                if($(this).text() == sem){
+                    formData.htmlPageTopContainer_selectStep = $(this).val();
+                    return;
+                }
+            });
 
+            for(var key in formData){
+                if(formData.hasOwnProperty(key)){
+                   if(!formData[key]){
+                       formData[key] = '';
+                   }
+                }
+            }
+            request.post({uri:url,form:formData},function(err,response,body){
+                if (err) throw err;
+                let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});
+                let table; 
+                $('tr[align="right"]').each(function(i,elem){
+                    if(i == 1){
+                      table =  $(this).html();
+                      return;
+                    }
+                });
+                $ = cheerio.load(table);
+                let data = [];
+                $('tbody').children().each(function(i,elem){
+                    if(i > 0){
+                        obj = {};
+                        let $select = cheerio.load($(this).html());
+                        obj.code = $select('span:nth-child(1)').text();
+                        obj.studentEndorsement = $select('span:nth-child(2)').text();
+                        obj.departmentEndorsement = $select('span:nth-child(3)').text();
+                        obj.financialEndorsement = $select('span:nth-child(4)').text();
+                        obj.registrarEndorsement = $select('span:nth-child(5)').text();
+                        data.push(obj);
+                    }
+                });
+
+                // data.forEach(function(obj){
+                //     console.log(obj.code,obj.studentEndorsement,obj.departmentEndorsement,obj.financialEndorsement,obj.registrarEndorsement);
+                // });
+
+                resolve(data);
+
+            });
+
+            
+        });
+    });
+    return data;
+});
 
 let s1 = new Session('AM.EN.U4CSE16126','qwerty');
 
-s1.getMarks(4);
+s1.showRegistrationStatus(4);
