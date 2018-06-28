@@ -55,6 +55,7 @@ Session.prototype.login = Promise.coroutine(function *(username,password){
                         var user = $('td[class="style3"]').html()
                         var name = user.substr(0,user.indexOf('('));
                         self.loggedIn = true;
+                        self.homeUrl = BASE_URL + '/portal/site/~'+self.username
                         resolve(name);
                     }
                 })
@@ -89,15 +90,48 @@ Session.prototype.login = Promise.coroutine(function *(username,password){
 
 Session.prototype.getAnnouncements = Promise.coroutine(function *(){
     var self = this;
-    var url = url_list.HomePage;
     var request = self.request;
     yield self.login(self.username,self.password);
-
-    yield new Promise(function(resolve,reject){
+    var url = self.homeUrl;
+    let data = yield new Promise(function(resolve,reject){
         request(url,function(err,response,body){
-            resolve();
+            let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});
+            let announceUrl = $('.icon-sakai-announcements').attr('href');
+            request(announceUrl,function(err,response,body){
+                let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});
+                var newurl = $('iframe').attr('src');
+                console.log(newurl);
+                let formData = {
+                    eventSubmit_doChange_pagesize:'changepagesize',
+                    selectPagesize:'200'
+                }
+                request.post({uri:newurl,form:formData},function(err,response,body){
+                    
+                    let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});
+                    let data = [];
+                    $('tr').each(function(i,elem){
+                        if(i > 0){
+                            let obj = {};
+                            let $select = cheerio.load($(this).html())
+                            obj.title = $select('a').text().trim();
+                            obj.link = $select('a').attr('href');
+                            obj.author = $(this).find('td[headers="author"]').text().trim()
+                            obj.code = $(this).find('td[headers="channel"]').text().trim()
+                            obj.date = $(this).find('td[headers="date"]').text().trim()
+                            
+                            data.push(obj);
+                        }
+                    });
+                    resolve(data);
+                });
+                
+                
+            });
         });
+
     });
+
+    return data;
     
 });
 
@@ -249,9 +283,6 @@ Session.prototype.getAttendance = Promise.coroutine(function *(sem,type){
                     }   
                     
                 });
-                data.forEach(function(obj){
-                    console.log(obj.code,obj.percentage);
-                })
 
                 resolve(data);
             });
@@ -264,6 +295,7 @@ Session.prototype.getAssignments = Promise.coroutine(function *(courseCode){
     var self = this;
     var request = self.request;
     self.name = yield self.login(self.username,self.password);
+    
     
 });
 
@@ -423,4 +455,8 @@ Session.prototype.showRegistrationStatus = Promise.coroutine(function *(sem){
 
 let s1 = new Session('AM.EN.U4CSE16126','qwerty');
 
-s1.showRegistrationStatus(4);
+s1.getAnnouncements().then(function(data){
+    data.forEach(function(obj){
+        console.log(obj);
+    });
+});
