@@ -99,9 +99,11 @@ Session.prototype.getAnnouncements = Promise.coroutine(function *(){
     var url = self.homeUrl;
     let data = yield new Promise(function(resolve,reject){
         request(url,function(err,response,body){
+            if (err) throw err;
             let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});
             let announceUrl = $('.icon-sakai-announcements').attr('href');
             request(announceUrl,function(err,response,body){
+                if(err) throw err;
                 let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});
                 var newurl = $('iframe').attr('src');
                 let formData = {
@@ -307,16 +309,19 @@ Session.prototype.getAssignment = Promise.coroutine(function *(courseCode){
 
     let data = yield new Promise(function(resolve,reject){
         request(url,function(err,response,body){
+            if(err) throw err;
             let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});
 
             var assignmentUrl = $('.icon-sakai-assignment-grades').attr('href');
 
             request(assignmentUrl,function(err,response,body){
+                if(err) throw err;
                 let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});
 
                 var newurl = $('iframe').attr('src');
 
                 request(newurl,function(err,response,body){
+                    if(err) throw err;
                     let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});
                     let data = [];
                     $('tr').each(function(i,elem){
@@ -354,6 +359,7 @@ Session.prototype.getAllUrls = Promise.coroutine(function *(){
     if(self.urls.length == 0){
         yield new Promise(function(resolve,reject){
             request(url,function(err,response,body){
+                if(err) throw err;
                 let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});
                 var $comments = $("*").contents().filter(function () {
                     return this.nodeType === 8;
@@ -546,5 +552,54 @@ Session.prototype.showRegistrationStatus = Promise.coroutine(function *(sem){
     return data;
 });
 
+Session.prototype.getAllDues = Promise.coroutine(function *(){
+    var self = this;
+    var request = self.request;
+    var url  = url_list.viewDues;
+    self.name = yield self.login(self.username,self.password);
+
+    let data = yield new Promise(function(resolve,reject){
+        request(url,function(err,response,body){
+            if(err) throw err;
+            let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});
+            
+            var table = $('table[align="Left"]');
+            var tbody;
+            table.children().each(function(i,elem){
+                if(i == 1){
+                    tbody = $(this)
+                    return;
+                }
+            });
+            let data = [];
+            tbody.children().each(function(i,elem){
+
+                let $select =  cheerio.load($(this).html());
+                let obj = {};
+                obj.author = $select('span:nth-child(2)').text();
+                obj.code = $select('span:nth-child(3)').text();
+                obj.remarks = $select('input[type="HIDDEN"]').val();
+                $select('span').each(function(i,elem){
+                    if ($select(this).attr('id').includes('IncdntDte')){
+                        obj.date = $(this).text();
+                    }
+                    if($select(this).attr('id').includes('Fine_')){
+                        obj.fine = $(this).text();
+                    }
+                    if($select(this).attr('id').includes('Fineamt_')){
+                        obj.paid = $(this).text();
+                    }
+                });
+                data.push(obj);
+
+            });
+
+            resolve(data);
 
 
+
+        });
+    });
+
+    return data;
+});
