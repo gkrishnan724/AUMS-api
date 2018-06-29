@@ -344,11 +344,7 @@ Session.prototype.getAssignment = Promise.coroutine(function *(courseCode){
 
     data.forEach(function(obj){
         console.log(obj.title,obj.openDate,obj.dueDate);
-    });
-
-    
-    
-    
+    });   
 });
 
 
@@ -393,10 +389,7 @@ Session.prototype.getAllUrls = Promise.coroutine(function *(){
                         self.urls.push(obj);
                     }
                 });
-
-                resolve();
-
-            
+                resolve();     
         
             });
         });
@@ -470,14 +463,8 @@ Session.prototype.getMarks = Promise.coroutine(function *(sem){
                         
                     }
                 });
-
                 resolve(data);
-
             });
-                        
-
-
-
 
         });
     })
@@ -603,3 +590,54 @@ Session.prototype.getAllDues = Promise.coroutine(function *(){
 
     return data;
 });
+
+Session.prototype.checkFeedback = Promise.coroutine(function *(){
+    var self = this;
+    var request = self.request;
+    self.name = yield self.login(self.username,self.password);
+
+    var url  = self.homeUrl;
+
+    let data = new Promise(function(resolve,reject){
+        request(url,function(err,response,body){
+            if(err) throw err;
+            let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});
+
+            let evalUrl =  $('.icon-sakai-rsf-evaluation').attr('href');
+
+            request(evalUrl,function(err,response,body){
+                if(err) throw err;
+                let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});
+
+                let newurl = $('iframe').attr('src');
+
+                request(newurl,function(err,response,body){
+                    if(err) throw err;
+                    let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});
+                    let data = [];
+                    $('tr').each(function(i,elem){
+                        if(i > 0){
+                            let $select = cheerio.load($(this).html());
+                            if($select('span:nth-child(2)').text() != 'Completed'){
+                                let obj = {};
+                                obj.title = $select('span:nth-child(1)').text();
+                                obj.startDate = $select('span:nth-child(3)').text();
+                                obj.endDate = $select('span:nth-child(4)').text();
+                                data.push(obj);
+                            }
+                        }
+                    });
+
+                    resolve(data);
+
+
+                });
+            });
+
+        });
+    });
+
+    return data;
+});
+
+module.exports = Session;
