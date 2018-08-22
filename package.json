@@ -10,10 +10,12 @@
   "license": "MIT",
   "dependencies": {
     "bluebird": "^3.5.1",
+    "body-parser": "^1.18.3",
     "cheerio": "^1.0.0-rc.2",
+    "express": "^4.16.3",
+    "nodemon": "^1.18.3",
     "promise": "^8.0.1",
     "request": "^2.87.0",
-    "request-promise": "^4.2.2",
-    "slackbots": "^1.1.0"
+    "request-promise": "^4.2.2"
   }
 }
