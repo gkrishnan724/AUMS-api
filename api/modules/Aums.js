@@ -18,11 +18,11 @@ let url_list = {
 
 /* Session Constructor */
 
-function Session(username,password){
+function Session(username,password,sessionCookies){
     this.username = username;
     this.password = password;
-    this.loggedIn = false;
-    var cookieJar = rp.jar();
+    this.cookieJar = rp.jar();
+    this.sessionCookies = sessionCookies;
     this.request = rp.defaults({
         followAllRedirects:true,
         headers:{
@@ -31,8 +31,9 @@ function Session(username,password){
             'Accept': '*/*', 
             'User-Agent': 'requests'
         },
-        jar:cookieJar
+        jar:this.cookieJar
     });
+
 
     this.urls = [];
     
@@ -42,17 +43,17 @@ function Session(username,password){
 
 Session.prototype.login = Promise.coroutine(function *(username,password){
     var self = this;
-    if(!self.loggedIn){
+    if(!self.sessionCookies){
         var request = self.request;
         var post = function(url,form){
             
             return new Promise(function(resolve,reject){
                 request.post({url:url,form:form},function(err,response,body){
-                    if (err) throw err;
+                    if (err) reject({error:500});
                     let $ = cheerio.load(body,{lowerCaseTags:true});
                     if($('input[name="lt"]').val()){
                         console.log("Unsuccessful login..");
-                        reject();
+                        reject({error:401});
                     }
                     else{
                         var user = $('td[class="style3"]').html()
@@ -67,7 +68,7 @@ Session.prototype.login = Promise.coroutine(function *(username,password){
 
         yield new Promise(function(resolve,reject){
             request({url:login_url},function(err,response,body){
-                if (err) throw err;
+                if (err) reject({error:500});
                 let $ = cheerio.load(body,{lowerCaseTags:true});
                 self.lt = $('input[name="lt"]').val();
                 self._eventId = $('input[name="_eventId"]').val();
@@ -86,7 +87,9 @@ Session.prototype.login = Promise.coroutine(function *(username,password){
         self.name = yield post(login_url,formData);
         yield self.getAllUrls();
     }
-
+    
+    
+    self.sessionCookies = self.cookieJar.getCookies(login_url);
     return self.name;
 
 });
@@ -99,11 +102,16 @@ Session.prototype.getAnnouncements = Promise.coroutine(function *(){
     var url = self.homeUrl;
     let data = yield new Promise(function(resolve,reject){
         request(url,function(err,response,body){
-            if (err) throw err;
+            if (err) reject({error:500});
             let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});
+            if($('input[name="lt"]').val()){
+                self.sessionCookies = undefined;
+                resolve(-1);
+                return;
+            }
             let announceUrl = $('.icon-sakai-announcements').attr('href');
             request(announceUrl,function(err,response,body){
-                if(err) throw err;
+                if(err) reject({error:500});
                 let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});
                 var newurl = $('iframe').attr('src');
                 let formData = {
@@ -137,6 +145,10 @@ Session.prototype.getAnnouncements = Promise.coroutine(function *(){
 
     });
 
+    if(data == -1){
+        data = yield self.getAnnouncements();
+    }
+
     return data;
     
 });
@@ -150,6 +162,11 @@ Session.prototype.getGrades = Promise.coroutine(function *(sem){
     let data = yield new Promise(function(resolve,reject){
         request(url,function(err,response,body){
             let $ = cheerio.load(body,{lowerCaseTags:true});
+            if($('input[name="lt"]').val()){
+                self.sessionCookies = undefined;
+                resolve(-1);
+                return;
+            }
             let formData = {};
             formData.Page_refIndex_hidden = $('input[name="Page_refIndex_hidden"]').val();
             formData.htmlPageTopContainer_hiddentblGrades = $('input[name="htmlPageTopContainer_hiddentblGrades"]').val();
@@ -207,6 +224,10 @@ Session.prototype.getGrades = Promise.coroutine(function *(sem){
         });
     });
 
+    if(data == -1){
+        data = yield self.getGrades(sem);
+    }
+
     return data;
     
 });
@@ -234,8 +255,13 @@ Session.prototype.getAttendance = Promise.coroutine(function *(sem,type){
 
     let data = yield new Promise(function(resolve,reject){
         request(url,function(err,response,body){
-            if(err) throw err;
+            if(err) reject({error:500});
             let $  = cheerio.load(body,{lowerCaseTags:true});
+            if($('input[name="lt"]').val()){
+                self.sessionCookies = undefined;
+                resolve(-1);
+                return;
+            }
             let formData = {};
             formData.Page_refIndex_hidden = $('input[name="Page_refIndex_hidden"]').val();
             formData.htmlPageTopContainer_txtrollnumber = $('input[name="htmlPageTopContainer_txtrollnumber"]').val();
@@ -268,7 +294,7 @@ Session.prototype.getAttendance = Promise.coroutine(function *(sem,type){
             
             request.post({uri:url,form:formData},function(err,response,body){
                 let data = [];
-                if (err) throw err;
+                if (err) reject({error:500});
                 let $ = cheerio.load(body,{lowerCaseTags:true});
                 let table = $('tr[align="right"]').first().children().first().html();
                 $ = cheerio.load(table);
@@ -294,6 +320,10 @@ Session.prototype.getAttendance = Promise.coroutine(function *(sem,type){
             });
         });
     });
+
+    if(data == -1){
+        data = yield self.getAttendance(sem,type);
+    }
     return data;    
 });
 
@@ -309,19 +339,23 @@ Session.prototype.getAssignment = Promise.coroutine(function *(courseCode){
 
     let data = yield new Promise(function(resolve,reject){
         request(url,function(err,response,body){
-            if(err) throw err;
+            if(err) reject({error:500});
             let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});
-
+            if($('input[name="lt"]').val()){
+                self.sessionCookies = undefined;
+                resolve(-1);
+                return;
+            }
             var assignmentUrl = $('.icon-sakai-assignment-grades').attr('href');
 
             request(assignmentUrl,function(err,response,body){
-                if(err) throw err;
+                if(err) reject({error:500});
                 let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});
 
                 var newurl = $('iframe').attr('src');
 
                 request(newurl,function(err,response,body){
-                    if(err) throw err;
+                    if(err) reject({error:500});
                     let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});
                     let data = [];
                     $('tr').each(function(i,elem){
@@ -341,10 +375,10 @@ Session.prototype.getAssignment = Promise.coroutine(function *(courseCode){
             });
         });
     });
-
-    data.forEach(function(obj){
-        console.log(obj.title,obj.openDate,obj.dueDate);
-    });   
+    if(data == -1){
+        data = yield self.getAssignment(courseCode);
+    }
+    return data;
 });
 
 
@@ -355,7 +389,7 @@ Session.prototype.getAllUrls = Promise.coroutine(function *(){
     if(self.urls.length == 0){
         yield new Promise(function(resolve,reject){
             request(url,function(err,response,body){
-                if(err) throw err;
+                if(err) reject({error:500});
                 let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});
                 var $comments = $("*").contents().filter(function () {
                     return this.nodeType === 8;
@@ -404,8 +438,13 @@ Session.prototype.getMarks = Promise.coroutine(function *(sem){
     self.name = yield self.login(self.username,self.password);
     let data = yield new Promise(function(resolve,reject){
         request(url,function(err,response,body){
-            if(err) throw err;
+            if(err) reject({error:500});
             let $ = cheerio.load(body,{lowerCaseTags:true,lowerCaseAttributeNames:true});
+            if($('input[name="lt"]').val()){
+                self.sessionCookies = undefined;
+                resolve(-1);
+                return;
+            }
             let formData = {};
             formData.Page_refIndex_hidden = $('input[name="Page_refIndex_hidden"]').val();
             formData.htmlPageTopContainer_status = $('input[name="htmlPageTopContainer_status"]').val();
@@ -429,7 +468,7 @@ Session.prototype.getMarks = Promise.coroutine(function *(sem){
             }
 
             request.post({uri:url,form:formData},function(err,response,body){
-                if(err) throw err;
+                if(err) reject({error:500});
 
                 let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});
                 let table; 
@@ -469,6 +508,10 @@ Session.prototype.getMarks = Promise.coroutine(function *(sem){
         });
     })
 
+    if(data == -1){
+        data = yield self.getMarks(sem);
+    }
+
     return data;
 });
 
@@ -481,8 +524,13 @@ Session.prototype.showRegistrationStatus = Promise.coroutine(function *(sem){
     self.name = yield self.login(self.username,self.password);
     let data = yield new Promise(function(resolve,reject){
         request(url,function(err,response,body){
-            if(err) throw err;
+            if(err) reject({error:500});
             let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});
+            if($('input[name="lt"]').val()){
+                self.sessionCookies = undefined;
+                resolve(-1);
+                return;
+            }
             let formData = {};
             formData.Page_refIndex_hidden = $('input[name="Page_refIndex_hidden"]').val();
             formData.htmlPageTopContainer_status = $('input[name="htmlPageTopContainer_status"]').val();
@@ -505,7 +553,7 @@ Session.prototype.showRegistrationStatus = Promise.coroutine(function *(sem){
                 }
             }
             request.post({uri:url,form:formData},function(err,response,body){
-                if (err) throw err;
+                if (err) reject({error:500});
                 let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});
                 let table; 
                 $('tr[align="right"]').each(function(i,elem){
@@ -536,6 +584,9 @@ Session.prototype.showRegistrationStatus = Promise.coroutine(function *(sem){
             
         });
     });
+    if(data == -1){
+        data = yield self.showRegistrationStatus(sem);
+    }
     return data;
 });
 
@@ -544,12 +595,15 @@ Session.prototype.getAllDues = Promise.coroutine(function *(){
     var request = self.request;
     var url  = url_list.viewDues;
     self.name = yield self.login(self.username,self.password);
-
     let data = yield new Promise(function(resolve,reject){
         request(url,function(err,response,body){
-            if(err) throw err;
+            if(err) reject({error:500});
             let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});
-            
+            if($('input[name="lt"]').val()){
+                self.sessionCookies = undefined;
+                resolve(-1);
+                return;
+            }
             var table = $('table[align="Left"]');
             var tbody;
             table.children().each(function(i,elem){
@@ -587,7 +641,9 @@ Session.prototype.getAllDues = Promise.coroutine(function *(){
 
         });
     });
-
+    if(data == -1){
+      data = yield self.getAllDues();
+    }
     return data;
 });
 
@@ -600,19 +656,23 @@ Session.prototype.checkFeedback = Promise.coroutine(function *(){
 
     let data = new Promise(function(resolve,reject){
         request(url,function(err,response,body){
-            if(err) throw err;
+            if(err) reject({error:500});
             let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});
-
+            if($('input[name="lt"]').val()){
+                self.sessionCookies = undefined;
+                resolve(-1);
+                return;
+            }
             let evalUrl =  $('.icon-sakai-rsf-evaluation').attr('href');
 
             request(evalUrl,function(err,response,body){
-                if(err) throw err;
+                if(err) reject({error:500});
                 let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});
 
                 let newurl = $('iframe').attr('src');
 
                 request(newurl,function(err,response,body){
-                    if(err) throw err;
+                    if(err) reject({error:500});
                     let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});
                     let data = [];
                     $('tr').each(function(i,elem){
@@ -636,6 +696,10 @@ Session.prototype.checkFeedback = Promise.coroutine(function *(){
 
         });
     });
+
+    if(data == -1){
+        data = yield self.checkFeedback();
+    }
 
     return data;
 });

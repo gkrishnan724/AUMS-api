@@ -4,8 +4,17 @@ const Session = require('../modules/Aums');
 var router = express.Router();
 
 router.get('/',function(req,res){
-    res.send('Welcome to the AUMS api for camel.')
+    res.send('AUMS service for camel bot..')
 });
+
+
+router.post('/login',function(req,res){
+    new Session(req.username,req.password);
+    
+    res.status(200).json({
+        
+    });
+}); 
 
 router.post('/grades',function(req,res){
 
