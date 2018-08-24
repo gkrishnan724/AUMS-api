@@ -22,7 +22,14 @@ function Session(username,password,sessionCookies){
     this.username = username;
     this.password = password;
     this.cookieJar = rp.jar();
+    var self = this;
     this.sessionCookies = sessionCookies;
+    if(sessionCookies){
+        let cookieList = sessionCookies.split(';')
+        cookieList.forEach(function(cookie){
+            self.cookieJar.setCookie(rp.cookie(cookie),login_url);
+        });
+    }
     this.request = rp.defaults({
         followAllRedirects:true,
         headers:{
@@ -33,11 +40,7 @@ function Session(username,password,sessionCookies){
         },
         jar:this.cookieJar
     });
-
-
-    this.urls = [];
-    
-    
+    this.urls = []; 
 }
 
 
@@ -49,11 +52,10 @@ Session.prototype.login = Promise.coroutine(function *(username,password){
             
             return new Promise(function(resolve,reject){
                 request.post({url:url,form:form},function(err,response,body){
-                    if (err) reject({error:500});
+                    if (err) reject({error:500,message:"Internal server error"});
                     let $ = cheerio.load(body,{lowerCaseTags:true});
                     if($('input[name="lt"]').val()){
-                        console.log("Unsuccessful login..");
-                        reject({error:401});
+                        reject({error:401,message:"Incorrect Credentials"});
                     }
                     else{
                         var user = $('td[class="style3"]').html()
@@ -68,7 +70,7 @@ Session.prototype.login = Promise.coroutine(function *(username,password){
 
         yield new Promise(function(resolve,reject){
             request({url:login_url},function(err,response,body){
-                if (err) reject({error:500});
+                if (err) reject({error:500,message:"Internal server error"});
                 let $ = cheerio.load(body,{lowerCaseTags:true});
                 self.lt = $('input[name="lt"]').val();
                 self._eventId = $('input[name="_eventId"]').val();
@@ -89,7 +91,7 @@ Session.prototype.login = Promise.coroutine(function *(username,password){
     }
     
     
-    self.sessionCookies = self.cookieJar.getCookies(login_url);
+    self.sessionCookies = self.cookieJar.getCookieString(login_url);
     return self.name;
 
 });
@@ -102,7 +104,7 @@ Session.prototype.getAnnouncements = Promise.coroutine(function *(){
     var url = self.homeUrl;
     let data = yield new Promise(function(resolve,reject){
         request(url,function(err,response,body){
-            if (err) reject({error:500});
+            if (err) reject({error:500,message:"Internal server error"});
             let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});
             if($('input[name="lt"]').val()){
                 self.sessionCookies = undefined;
@@ -111,7 +113,7 @@ Session.prototype.getAnnouncements = Promise.coroutine(function *(){
             }
             let announceUrl = $('.icon-sakai-announcements').attr('href');
             request(announceUrl,function(err,response,body){
-                if(err) reject({error:500});
+                if(err) reject({error:500,message:"Internal server error"});
                 let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});
                 var newurl = $('iframe').attr('src');
                 let formData = {
@@ -255,7 +257,7 @@ Session.prototype.getAttendance = Promise.coroutine(function *(sem,type){
 
     let data = yield new Promise(function(resolve,reject){
         request(url,function(err,response,body){
-            if(err) reject({error:500});
+            if(err) reject({error:500,message:"Internal server error"});
             let $  = cheerio.load(body,{lowerCaseTags:true});
             if($('input[name="lt"]').val()){
                 self.sessionCookies = undefined;
@@ -294,7 +296,7 @@ Session.prototype.getAttendance = Promise.coroutine(function *(sem,type){
             
             request.post({uri:url,form:formData},function(err,response,body){
                 let data = [];
-                if (err) reject({error:500});
+                if (err) reject({error:500,message:"Internal server error"});
                 let $ = cheerio.load(body,{lowerCaseTags:true});
                 let table = $('tr[align="right"]').first().children().first().html();
                 $ = cheerio.load(table);
@@ -339,7 +341,7 @@ Session.prototype.getAssignment = Promise.coroutine(function *(courseCode){
 
     let data = yield new Promise(function(resolve,reject){
         request(url,function(err,response,body){
-            if(err) reject({error:500});
+            if(err) reject({error:500,message:"Internal server error"});
             let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});
             if($('input[name="lt"]').val()){
                 self.sessionCookies = undefined;
@@ -349,13 +351,13 @@ Session.prototype.getAssignment = Promise.coroutine(function *(courseCode){
             var assignmentUrl = $('.icon-sakai-assignment-grades').attr('href');
 
             request(assignmentUrl,function(err,response,body){
-                if(err) reject({error:500});
+                if(err) reject({error:500,message:"Internal server error"});
                 let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});
 
                 var newurl = $('iframe').attr('src');
 
                 request(newurl,function(err,response,body){
-                    if(err) reject({error:500});
+                    if(err) reject({error:500,message:"Internal server error"});
                     let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});
                     let data = [];
                     $('tr').each(function(i,elem){
@@ -389,7 +391,7 @@ Session.prototype.getAllUrls = Promise.coroutine(function *(){
     if(self.urls.length == 0){
         yield new Promise(function(resolve,reject){
             request(url,function(err,response,body){
-                if(err) reject({error:500});
+                if(err) reject({error:500,message:"Internal server error"});
                 let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});
                 var $comments = $("*").contents().filter(function () {
                     return this.nodeType === 8;
@@ -438,7 +440,7 @@ Session.prototype.getMarks = Promise.coroutine(function *(sem){
     self.name = yield self.login(self.username,self.password);
     let data = yield new Promise(function(resolve,reject){
         request(url,function(err,response,body){
-            if(err) reject({error:500});
+            if(err) reject({error:500,message:"Internal server error"});
             let $ = cheerio.load(body,{lowerCaseTags:true,lowerCaseAttributeNames:true});
             if($('input[name="lt"]').val()){
                 self.sessionCookies = undefined;
@@ -468,7 +470,7 @@ Session.prototype.getMarks = Promise.coroutine(function *(sem){
             }
 
             request.post({uri:url,form:formData},function(err,response,body){
-                if(err) reject({error:500});
+                if(err) reject({error:500,message:"Internal server error"});
 
                 let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});
                 let table; 
@@ -524,7 +526,7 @@ Session.prototype.showRegistrationStatus = Promise.coroutine(function *(sem){
     self.name = yield self.login(self.username,self.password);
     let data = yield new Promise(function(resolve,reject){
         request(url,function(err,response,body){
-            if(err) reject({error:500});
+            if(err) reject({error:500,message:"Internal server error"});
             let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});
             if($('input[name="lt"]').val()){
                 self.sessionCookies = undefined;
@@ -553,7 +555,7 @@ Session.prototype.showRegistrationStatus = Promise.coroutine(function *(sem){
                 }
             }
             request.post({uri:url,form:formData},function(err,response,body){
-                if (err) reject({error:500});
+                if (err) reject({error:500,message:"Internal server error"});
                 let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});
                 let table; 
                 $('tr[align="right"]').each(function(i,elem){
@@ -597,7 +599,7 @@ Session.prototype.getAllDues = Promise.coroutine(function *(){
     self.name = yield self.login(self.username,self.password);
     let data = yield new Promise(function(resolve,reject){
         request(url,function(err,response,body){
-            if(err) reject({error:500});
+            if(err) reject({error:500,message:"Internal server error"});
             let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});
             if($('input[name="lt"]').val()){
                 self.sessionCookies = undefined;
@@ -656,7 +658,7 @@ Session.prototype.checkFeedback = Promise.coroutine(function *(){
 
     let data = new Promise(function(resolve,reject){
         request(url,function(err,response,body){
-            if(err) reject({error:500});
+            if(err) reject({error:500,message:"Internal server error"});
             let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});
             if($('input[name="lt"]').val()){
                 self.sessionCookies = undefined;
@@ -666,13 +668,13 @@ Session.prototype.checkFeedback = Promise.coroutine(function *(){
             let evalUrl =  $('.icon-sakai-rsf-evaluation').attr('href');
 
             request(evalUrl,function(err,response,body){
-                if(err) reject({error:500});
+                if(err) reject({error:500,message:"Internal server error"});
                 let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});
 
                 let newurl = $('iframe').attr('src');
 
                 request(newurl,function(err,response,body){
-                    if(err) reject({error:500});
+                    if(err) reject({error:500,message:"Internal server error"});
                     let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});
                     let data = [];
                     $('tr').each(function(i,elem){
@@ -704,6 +706,12 @@ Session.prototype.checkFeedback = Promise.coroutine(function *(){
     return data;
 });
 
+
+
+
+// s1.login(s1.username,s1.password).then(function(){
+//     console.log(s1.sessionCookies);
+// });
 
 
 module.exports = Session;
