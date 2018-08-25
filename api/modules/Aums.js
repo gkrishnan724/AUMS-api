@@ -18,7 +18,7 @@ let url_list = {
 
 /* Session Constructor */
 
-function Session(username,password,sessionCookies){
+function Session(username,password,sessionCookies,subUrls){
     this.username = username;
     this.password = password;
     this.cookieJar = rp.jar();
@@ -27,7 +27,7 @@ function Session(username,password,sessionCookies){
     if(sessionCookies){
         let cookieList = sessionCookies.split(';')
         cookieList.forEach(function(cookie){
-            self.cookieJar.setCookie(rp.cookie(cookie),login_url);
+            self.cookieJar.setCookie(rp.cookie(cookie),BASE_URL);
         });
     }
     this.request = rp.defaults({
@@ -40,7 +40,11 @@ function Session(username,password,sessionCookies){
         },
         jar:this.cookieJar
     });
-    this.urls = []; 
+    this.urls = [];
+    if(subUrls){
+        this.urls = subUrls;
+    }
+    this.homeUrl =  BASE_URL + '/portal/site/~'+self.username;
 }
 
 
@@ -332,14 +336,17 @@ Session.prototype.getAttendance = Promise.coroutine(function *(sem,type){
 Session.prototype.getAssignment = Promise.coroutine(function *(courseCode){
     var self = this;
     var request = self.request;
+    yield self.getAllUrls();
     self.name = yield self.login(self.username,self.password);
     var obj  = self.urls.find(function(obj){
         return obj.code ==  courseCode;
     });
     
-    let url = obj.url;
-
     let data = yield new Promise(function(resolve,reject){
+        if(!obj){
+            reject({error:404,message:"Invalid subject code"});
+        }
+        let url = obj.url;
         request(url,function(err,response,body){
             if(err) reject({error:500,message:"Internal server error"});
             let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});

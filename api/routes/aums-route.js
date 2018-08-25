@@ -13,7 +13,8 @@ router.post('/login',function(req,res){
     var session = new Session(req.body.username,req.body.password);
     session.login(session.username,session.password).then(function(){
         res.status(200).json({
-            cookies:session.sessionCookies
+            cookies:session.sessionCookies,
+            URLS:session.urls
         });
     },function(err){
         res.status(err.error).json({
