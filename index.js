@@ -4,6 +4,8 @@ const api = require('./api/api');
 
 var app = express();
 
+
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended:false}));
 
@@ -12,7 +14,7 @@ app.use(bodyParser.urlencoded({extended:false}));
 // This is where the front-end will be residing. 
 
 app.get('/',function(req,res){
-    res.send('Welcome to Camel..');
+    res.send('Welcome to camel..');
 });
 
 
@@ -34,8 +36,8 @@ app.use(function(error, req, res, next) {
     });
 });
 
-app.listen(3000,function(){
-    console.log('Server started at port 3000..');
+app.listen(process.env.PORT || 3000,function(){
+    console.log('Server started..');
 });
 
 
