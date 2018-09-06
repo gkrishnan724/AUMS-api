@@ -437,11 +437,84 @@ shows the parameters to consider when sending a particular request with referenc
 ```sh
 #route: aumshelper.herokuapp.com/api/aums/assignments
 #request params:{
-	"username":"am.en.u4cse16***",
-	"password":"Your_passwd_here",
-	"options":{
-		"sem":"4"
-	}
+    "username":"am.en.u4cse16126",
+    "password":"qwerty",
+     "cookies": "CASTGC=TGT-76391-KNZ9kNfxAhzVhyOmqoBas9qaeiZbZcFNhqY4e06JPnXDLdcNZ2-aumstest; JSESSIONID=AFE1BE70CEF25C5CC8FE555EDB7E81FD; JSESSIONID1=c7cdea8b-07ed-439a-918d-53f836fd39ef.localhost",
+     "options":{
+     	"code":"15CSE302"
+     }
+    
+}
+#return: {
+    "cookies": "CASTGC=TGT-76391-KNZ9kNfxAhzVhyOmqoBas9qaeiZbZcFNhqY4e06JPnXDLdcNZ2-aumstest; JSESSIONID=AFE1BE70CEF25C5CC8FE555EDB7E81FD; JSESSIONID1=c7cdea8b-07ed-439a-918d-53f836fd39ef.localhost",
+    "data": [
+        {
+            "title": "Labsheet7",
+            "link": "https://aums-apps-6.amrita.edu:8443/portal/tool/11d80f54-23d8-476c-bb33-48925a653aed?assignmentReference=/assignment/a/29703/aae367f3-a77b-4d2c-b43c-645478d25624&panel=Main&sakai_action=doView_submission",
+            "openDate": "Sep 5, 2018 12:00 pm",
+            "dueDate": "Sep 12, 2018 5:00 pm"
+        },
+        {
+            "title": "labsheet6 - Copy - Copy",
+            "link": "https://aums-apps-6.amrita.edu:8443/portal/tool/11d80f54-23d8-476c-bb33-48925a653aed?submissionId=/assignment/s/29703/dcc970f2-ee28-42cb-b204-7771bcd57858/e448e72b-576c-4f89-a402-e568223d5cc6&panel=Main&sakai_action=doView_grade",
+            "openDate": "Aug 29, 2018 12:00 pm",
+            "dueDate": "Aug 31, 2018 5:00 pm"
+        },
+        {
+            "title": "labsheet_5 - Copy",
+            "link": "https://aums-apps-6.amrita.edu:8443/portal/tool/11d80f54-23d8-476c-bb33-48925a653aed?submissionId=/assignment/s/29703/a825be38-47be-4f4e-809f-e7544ff596d6/80fafde8-ae8b-472b-9ea6-0e28ef59c407&panel=Main&sakai_action=doView_grade",
+            "openDate": "Aug 3, 2018 12:00 pm",
+            "dueDate": "Aug 31, 2018 5:00 pm"
+        },
+        {
+            "title": "labsheet6 - Copy",
+            "link": "https://aums-apps-6.amrita.edu:8443/portal/tool/11d80f54-23d8-476c-bb33-48925a653aed?assignmentReference=/assignment/a/29703/1c330d5f-f1a5-4060-9e06-0bf76116417b&panel=Main&sakai_action=doView_submission",
+            "openDate": "Aug 3, 2018 12:00 pm",
+            "dueDate": "Aug 14, 2018 5:00 pm"
+        },
+        {
+            "title": "labsheet6",
+            "link": "https://aums-apps-6.amrita.edu:8443/portal/tool/11d80f54-23d8-476c-bb33-48925a653aed?assignmentReference=/assignment/a/29703/d3c92d4f-a429-4115-94a5-19d20623d135&panel=Main&sakai_action=doView_submission",
+            "openDate": "Aug 3, 2018 12:00 pm",
+            "dueDate": "Aug 10, 2018 5:00 pm"
+        },
+        {
+            "title": "labsheet_5",
+            "link": "https://aums-apps-6.amrita.edu:8443/portal/tool/11d80f54-23d8-476c-bb33-48925a653aed?assignmentReference=/assignment/a/29703/5d7f3434-a153-446b-824d-1268f8fcd8f1&panel=Main&sakai_action=doView_submission",
+            "openDate": "Aug 3, 2018 12:00 pm",
+            "dueDate": "Aug 10, 2018 5:00 pm"
+        },
+        {
+            "title": "Labsheet4 - Copy",
+            "link": "https://aums-apps-6.amrita.edu:8443/portal/tool/11d80f54-23d8-476c-bb33-48925a653aed?submissionId=/assignment/s/29703/70aa4556-bc23-4989-a4fb-ec6361537367/d77ff3f8-baf3-4da9-b70d-a9e79b43add1&panel=Main&sakai_action=doView_grade",
+            "openDate": "Jul 21, 2018 12:00 pm",
+            "dueDate": "Aug 4, 2018 5:00 pm"
+        },
+        {
+            "title": "Labsheet4",
+            "link": "https://aums-apps-6.amrita.edu:8443/portal/tool/11d80f54-23d8-476c-bb33-48925a653aed?assignmentReference=/assignment/a/29703/9074b0a1-c907-479e-a7af-546630fbfdc7&panel=Main&sakai_action=doView_submission",
+            "openDate": "Jul 21, 2018 12:00 pm",
+            "dueDate": "Jul 28, 2018 5:00 pm"
+        },
+        {
+            "title": "Labsheet3",
+            "link": "https://aums-apps-6.amrita.edu:8443/portal/tool/11d80f54-23d8-476c-bb33-48925a653aed?assignmentReference=/assignment/a/29703/e169d582-5c57-4ec6-a120-748100141ff5&panel=Main&sakai_action=doView_submission",
+            "openDate": "Jul 21, 2018 12:00 pm",
+            "dueDate": "Jul 28, 2018 5:00 pm"
+        },
+        {
+            "title": "Labsheet2",
+            "link": "https://aums-apps-6.amrita.edu:8443/portal/tool/11d80f54-23d8-476c-bb33-48925a653aed?assignmentReference=/assignment/a/29703/0014ae9b-3171-4b10-a8bf-1890aa89f676&panel=Main&sakai_action=doView_submission",
+            "openDate": "Jul 18, 2018 12:00 pm",
+            "dueDate": "Jul 25, 2018 5:00 pm"
+        },
+        {
+            "title": "Labsheet1",
+            "link": "https://aums-apps-6.amrita.edu:8443/portal/tool/11d80f54-23d8-476c-bb33-48925a653aed?assignmentReference=/assignment/a/29703/c4f72839-159f-4539-b923-73fc462637f4&panel=Main&sakai_action=doView_submission",
+            "openDate": "Jul 18, 2018 12:00 pm",
+            "dueDate": "Jul 25, 2018 5:00 pm"
+        }
+    ]
 }
 
 ```
@@ -570,3 +643,7 @@ Do not hesistate to show what you have built using the API here. The author appr
 License
 ----
 MIT
+
+## Contributors
+[Rahul Krishnan](https://github.com/rahulkrishnan98)
+[Gopala Krishnan P](https://github.com/gkrishnan724)
