@@ -121,4 +121,18 @@ router.post('/feedback',function(req,res){
     });
 });
 
+router.post('/announcements',function(req,res){
+    var session = new Session(req.body.username,req.body.password,req.body.cookies);
+    session.getAnnouncements().then(function(data){
+        res.status(200).json({
+            cookies:session.sessionCookies,
+            data:data
+        });
+    },function(err){
+        res.status(err.error).json({
+            message: err.message
+        });
+    });
+});
+
 module.exports = router;
