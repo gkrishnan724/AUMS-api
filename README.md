@@ -1,6 +1,6 @@
 # Amrita University Management system API 
 
-[![Gopala Krishnan| Amrita](https://cldup.com/dTxpPi9lDf.thumb.png)](https://www.amrita.edu/)
+[![Gopala Krishnan| Amrita]()](https://www.amrita.edu/)
 
 AUMS-api is an API built to ease the developement process for native/web apps working on top of it. The author has built the API using Express and Node. The api is currently shifting from its developement phase to deployment, with features to be rolled out in the near future. The readme is the broad overlay of the following
 
