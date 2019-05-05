@@ -1,8 +1,8 @@
 const rp = require('request');
 const cheerio = require('cheerio');
 const Promise = require('bluebird');
-const BASE_URL = 'https://aums-apps-6.amrita.edu:8443'
-let login_url =  BASE_URL + '/cas/login?service=https%3A%2F%2Faums-apps-6.amrita.edu%3A8443%2Faums%2FJsp%2FCore_Common%2Findex.jsp%3Ftask%3Doff'
+const BASE_URL = process.env.BASE_URL || "https://aums-apps-5.amrita.edu:8443";
+let login_url =  BASE_URL + '/cas/login?service='+encodeURIComponent(BASE_URL)+'%2Faums%2FJsp%2FCore_Common%2Findex.jsp'
 
 let url_list = {
     HomePage:BASE_URL+'/aums/Jsp' + '/DefineComponent/StaffHomePage.jsp?action=UMS-EVAL_CLASSHEADER_SCREEN_LINK',
@@ -15,6 +15,8 @@ let url_list = {
     navUrl: BASE_URL + '/aums/Jsp' + '/DefineComponent/ClassHeader.jsp?action=UMS-EVAL_CLASSHEADER_SCREEN_INIT'
 
 }
+
+
 
 /* Session Constructor */
 
@@ -53,10 +55,15 @@ Session.prototype.login = Promise.coroutine(function *(username,password){
     if(!self.sessionCookies){
         var request = self.request;
         var post = function(url,form){
-            
             return new Promise(function(resolve,reject){
                 request.post({url:url,form:form},function(err,response,body){
+                    console.log(err);
                     if (err) reject({error:500,message:"Internal server error"});
+                    console.log(response);
+                    if(!body){
+                        reject({message:"Internal server error"});
+                    }
+                    console.log(body);
                     let $ = cheerio.load(body,{lowerCaseTags:true});
                     if($('input[name="lt"]').val()){
                         reject({error:401,message:"Incorrect Credentials"});
@@ -75,10 +82,16 @@ Session.prototype.login = Promise.coroutine(function *(username,password){
         yield new Promise(function(resolve,reject){
             request({url:login_url},function(err,response,body){
                 if (err) reject({error:500,message:"Internal server error"});
+                if(!body){
+                    reject({message:"Internal server error"});
+                }
                 let $ = cheerio.load(body,{lowerCaseTags:true});
                 self.lt = $('input[name="lt"]').val();
                 self._eventId = $('input[name="_eventId"]').val();
                 self.submit = $('input[name="submit"]').val();
+                self.login_url = BASE_URL + $('#fm1').attr('action');
+                console.log(self.login_url);
+                
                 resolve();
             });
         });
@@ -90,7 +103,9 @@ Session.prototype.login = Promise.coroutine(function *(username,password){
             _eventId:self._eventId,
             submit:self.submit
         }
-        self.name = yield post(login_url,formData);
+        console.log(formData);
+        self.name = yield post(self.login_url,formData);
+        console.log(self.name);
         yield self.getAllUrls();
     }
     
@@ -109,9 +124,14 @@ Session.prototype.getAnnouncements = Promise.coroutine(function *(){
     let data = yield new Promise(function(resolve,reject){
         request(url,function(err,response,body){
             if (err) reject({error:500,message:"Internal server error"});
+            if(!body){
+                reject({message:"Internal server error"});
+            }
             let $ = cheerio.load(body,{lowerCaseAttributeNames:true,lowerCaseTags:true});
             if($('input[name="lt"]').val()){
                 self.sessionCookies = undefined;
+                
+                self.request = 
                 resolve(-1);
                 return;
             }
@@ -716,9 +736,6 @@ Session.prototype.checkFeedback = Promise.coroutine(function *(){
 
 
 
-// s1.login(s1.username,s1.password).then(function(){
-//     console.log(s1.sessionCookies);
-// });
 
 
 module.exports = Session;
